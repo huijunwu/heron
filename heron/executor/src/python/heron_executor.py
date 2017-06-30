@@ -569,6 +569,7 @@ class HeronExecutor(object):
       instance_info.append((instance_id, component_name, global_task_id, component_index))
 
     stmgr_cmd = [
+        # "valgrind --smc-check=all --trace-children=yes --tool=massif ",
         self.stmgr_binary,
         self.topology_name,
         self.topology_id,
@@ -736,6 +737,7 @@ class HeronExecutor(object):
     processes_to_monitor = {}
     # First start all the processes
     for (name, command) in commands.items():
+      Log.info("%s => %d" % (name, command))
       p = self._run_process(name, command, self.shell_env)
       processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
 
