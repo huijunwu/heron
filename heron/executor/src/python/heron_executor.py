@@ -739,11 +739,14 @@ class HeronExecutor(object):
     # First start all the processes
     for (name, command) in commands.items():
       Log.info("%s => %s" % (name, command))
-      p = self._run_process(name, command, self.shell_env)
-      processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
+      if name == "stmgr-1":
+        Log.info("do not start stmgr-1")
+      else:
+        p = self._run_process(name, command, self.shell_env)
+        processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
 
-      # Log down the pid file
-      log_pid_for_process(name, p.pid)
+        # Log down the pid file
+        log_pid_for_process(name, p.pid)
 
     with self.process_lock:
       self.processes_to_monitor.update(processes_to_monitor)
@@ -934,7 +937,7 @@ def main():
 
   executor.initialize()
   executor.start_state_manager_watches()
-  executor.start_process_monitor()
+  # executor.start_process_monitor()
 
 if __name__ == "__main__":
   main()
