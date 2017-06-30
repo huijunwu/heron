@@ -740,7 +740,7 @@ class HeronExecutor(object):
     for (name, command) in commands.items():
       Log.info("%s => %s" % (name, command))
       if name == "stmgr-1":
-        Log.info("do not start stmgr-1")
+        Log.info("do not start stmgr-1: %s" % ' '.join(command))
       else:
         p = self._run_process(name, command, self.shell_env)
         processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
