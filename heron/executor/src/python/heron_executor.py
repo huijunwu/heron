@@ -934,7 +934,7 @@ def main():
 
   executor.initialize()
   executor.start_state_manager_watches()
-  # executor.start_process_monitor()
+  executor.start_process_monitor()
 
 if __name__ == "__main__":
   main()
