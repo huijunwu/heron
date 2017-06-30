@@ -738,7 +738,7 @@ class HeronExecutor(object):
     processes_to_monitor = {}
     # First start all the processes
     for (name, command) in commands.items():
-      Log.info("%s => %d" % (name, command))
+      Log.info("%s => %s" % (name, command))
       p = self._run_process(name, command, self.shell_env)
       processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
 
