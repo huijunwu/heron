@@ -569,7 +569,7 @@ class HeronExecutor(object):
       instance_info.append((instance_id, component_name, global_task_id, component_index))
 
     stmgr_cmd = [
-        # "valgrind --smc-check=all --trace-children=yes --tool=massif ",
+        "valgrind --smc-check=all --trace-children=yes --tool=massif --log-socket=127.0.0.1 ",
         self.stmgr_binary,
         self.topology_name,
         self.topology_id,
@@ -738,15 +738,11 @@ class HeronExecutor(object):
     processes_to_monitor = {}
     # First start all the processes
     for (name, command) in commands.items():
-      Log.info("%s => %s" % (name, command))
-      if name == "stmgr-1":
-        Log.info("do not start stmgr-1: %s" % ' '.join(command))
-      else:
-        p = self._run_process(name, command, self.shell_env)
-        processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
+      p = self._run_process(name, command, self.shell_env)
+      processes_to_monitor[p.pid] = ProcessInfo(p, name, command)
 
-        # Log down the pid file
-        log_pid_for_process(name, p.pid)
+      # Log down the pid file
+      log_pid_for_process(name, p.pid)
 
     with self.process_lock:
       self.processes_to_monitor.update(processes_to_monitor)
@@ -937,7 +933,7 @@ def main():
 
   executor.initialize()
   executor.start_state_manager_watches()
-  # executor.start_process_monitor()
+  executor.start_process_monitor()
 
 if __name__ == "__main__":
   main()
