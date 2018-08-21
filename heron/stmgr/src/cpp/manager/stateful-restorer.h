@@ -1,17 +1,20 @@
-/*
- * Copyright 2017 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #ifndef SRC_CPP_SVCS_STMGR_SRC_MANAGER_STATEFUL_RESTORER_H_
@@ -19,8 +22,8 @@
 
 #include <ostream>
 #include <map>
-#include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 #include <typeinfo>   // operator typeid
 #include "proto/messages.h"
@@ -44,12 +47,12 @@ class TimeSpentMetric;
 namespace heron {
 namespace stmgr {
 
-class StMgrServer;
+class InstanceServer;
 class TupleCache;
 class StMgrClientMgr;
 class CkptMgrClient;
 
-// For Heron topologies running in exactly once semantics, the tmaster
+// For Heron topologies running in effectively once semantics, the tmaster
 // could initiate restore topology to a certain globally consistent checkpoint.
 // This could be triggered either during startup or after failure of certain
 // topology components. StatefulRestorer implements the state machine of this recovery
@@ -74,7 +77,7 @@ class StatefulRestorer {
  public:
   explicit StatefulRestorer(CkptMgrClient* _ckptmgr,
                             StMgrClientMgr* _clientmgr, TupleCache* _tuple_cache,
-                            StMgrServer* _server,
+                            InstanceServer* _server,
                             common::MetricsMgrSt* _metrics_manager_client,
                             std::function<void(proto::system::StatusCode,
                                                std::string, sp_int64)> _restore_done_watcher);
@@ -88,6 +91,7 @@ class StatefulRestorer {
   // callback passing in it the status of the restore along with _checkpoint_id
   // and the _restore_txid
   void StartRestore(const std::string& _checkpoint_id, sp_int64 _restore_txid,
+                    const std::unordered_set<sp_int32>& _local_taskids,
                     proto::system::PhysicalPlan* _pplan);
   // Called when ckptmgr client restarts
   void HandleCkptMgrRestart();
@@ -123,10 +127,10 @@ class StatefulRestorer {
 
   // Set of task ids for which we have sent out get checkpoint requests
   // to the ckptmgr but haven't gotten response back
-  std::set<sp_int32> get_ckpt_pending_;
+  std::unordered_set<sp_int32> get_ckpt_pending_;
   // Set of task ids which still haven;'t gotten back after
   // restoring their state
-  std::set<sp_int32> restore_pending_;
+  std::unordered_set<sp_int32> restore_pending_;
   // Have we not connected with some of our peer stmgrs?
   bool clients_connections_pending_;
   // Are any of our local instances still not connected with us?
@@ -136,12 +140,12 @@ class StatefulRestorer {
   // What is the restore txid associated with our attempt of restoring
   sp_int64 restore_txid_;
   // What are all our local taskids that we need to restore
-  std::set<sp_int32> local_taskids_;
+  std::unordered_set<sp_int32> local_taskids_;
 
   CkptMgrClient* ckptmgr_;
   StMgrClientMgr* clientmgr_;
   TupleCache* tuple_cache_;
-  StMgrServer* server_;
+  InstanceServer* server_;
   common::MetricsMgrSt* metrics_manager_client_;
 
   // Are we in the middle of a restore

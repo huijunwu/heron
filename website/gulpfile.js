@@ -1,106 +1,88 @@
-var gulp = require('gulp'),
-    // Pulls in any Gulp-related metadata
-    pkg = require('./package.json'),
-    // Use $ to invoke Gulp plugins
-    $ = require('gulp-load-plugins')(),
-    // All non-Gulp modules here
-    del = require('del');
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
-// Define the source and distribution directories
-var srcDir = './assets';
-var distDir = './static';
+const gulp     = require("gulp"),
+      sass     = require("gulp-sass"),
+      hash     = require("gulp-hash"),
+      prefixer = require("gulp-autoprefixer"),
+      uglify   = require("gulp-uglify"),
+      del      = require("del");
 
-// Define asset sources
-var SRC = {
-  js: srcDir + '/js/**/*.js',
-  css: srcDir + '/css/**/*.css',
-  sass: srcDir + '/sass/**/*.scss',
-  fonts: srcDir + '/fonts/**/*',
-  images: srcDir + '/img/**/*'
+const SRCS = {
+  sass: 'assets/sass/style.scss',
+  sassWatch: 'assets/sass/**/*.scss',
+  js: 'assets/js/app.js'
 }
 
-// Define asset distribution destination
-var DIST = {
-  css: distDir + '/css',
-  js: distDir + '/js',
-  fonts: distDir + '/fonts',
-  images: distDir + '/img',
-  all: distDir
+const DIST = {
+  css: 'static/css',
+  js: 'static/js'
 }
 
-// JavaScript assets
-gulp.task('js', function(done) {
-  gulp.src(SRC.js)
-    .pipe($.uglify().on('error', function(err) { console.log(err); }))
-    .pipe($.concat('app.min.js'))
+const sassConfig = {
+  outputStyle: 'compressed'
+}
+
+const prefixerConfig = {
+  browsers: ['last 2 versions'],
+	cascade: false
+}
+
+gulp.task('sass', (done) => {
+  del([`${DIST.css}/style-*.css`]);
+
+  gulp.src(SRCS.sass)
+    .pipe(sass(sassConfig).on('error', sass.logError))
+    .pipe(hash())
+    .pipe(prefixer(prefixerConfig))
+    .pipe(gulp.dest(DIST.css))
+    .pipe(hash.manifest('assetHashes.json'))
+    .pipe(gulp.dest('data'));
+  done();
+});
+
+gulp.task('sass:watch', () => {
+  gulp.watch(SRCS.sassWatch, gulp.series('sass'));
+});
+
+gulp.task('js', (done) => {
+  gulp.src(SRCS.js)
     .pipe(gulp.dest(DIST.js));
+
   done();
 });
 
-gulp.task('js:watch', function() {
-  gulp.watch(SRC.js, gulp.series('js'));
-});
+gulp.task('js', (done) => {
+  del([`${DIST.js}/app-*.js`]);
 
-// CSS assets
-gulp.task('css', function(done) {
-  gulp.src(SRC.css)
-    .pipe(gulp.dest(DIST.css));
+  gulp.src(SRCS.js)
+    .pipe(hash())
+    .pipe(gulp.dest(DIST.js))
+    .pipe(hash.manifest('assetHashes.json'))
+    .pipe(gulp.dest('data'));
   done();
 });
 
-gulp.task('css:watch', function() {
-  return gulp.watch(SRC.css, gulp.watch('css'));
+gulp.task('js:watch', () => {
+  gulp.watch(SRCS.js, gulp.series('js'));
 });
 
-// Sass assets
-gulp.task('sass', function(done) {
-  gulp.src(SRC.sass)
-    .pipe($.sass().on('error', function(err) { console.log(err); }))
-    .pipe($.cleanCss())
-    .pipe($.concat('style.min.css'))
-    .pipe(gulp.dest(DIST.css));
-  done();
-});
+gulp.task('build', gulp.series('sass', 'js'));
 
-gulp.task('sass:watch', function() {
-  gulp.watch(SRC.sass, gulp.series('sass'));
-});
-
-// Fonts
-gulp.task('fonts', function(done) {
-  gulp.src(SRC.fonts)
-    .pipe(gulp.dest(DIST.fonts));
-  done();
-});
-
-// Images
-gulp.task('images', function(done) {
-  gulp.src(SRC.images)
-    .pipe(gulp.dest(DIST.images));
-  done();
-});
-
-gulp.task('images:watch', function() {
-  gulp.watch(SRC.images, gulp.series('images'));
-});
-
-// One-time build; doesn't watch for changes
-gulp.task('build', gulp.series('js', 'sass', 'css', 'fonts', 'images'));
-
-// Delete static folder
-gulp.task('clean', function(done) {
-  del(DIST.all);
-  done();
-});
-
-// Run in development (i.e. watch) mode
-gulp.task('dev', gulp.series('build', gulp.parallel('js:watch', 'sass:watch', 'css:watch', 'images:watch')));
-
-// Help => list tasks
-gulp.task('help', function(done) {
-  $.taskListing.withFilters(null, 'help')
-  done();
-});
-
-// Default
-gulp.task('default', gulp.series('help'));
+gulp.task('dev', gulp.series('build', gulp.parallel('sass:watch', 'js:watch')));

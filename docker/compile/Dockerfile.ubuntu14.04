@@ -1,0 +1,36 @@
+FROM ubuntu:14.04
+
+# This is passed to the heron build command via the --config flag
+ENV TARGET_PLATFORM ubuntu
+ENV bazelVersion 0.14.1
+
+RUN apt-get update && apt-get install -y software-properties-common
+
+RUN add-apt-repository ppa:george-edison55/cmake-3.x
+RUN add-apt-repository ppa:openjdk-r/ppa
+
+RUN apt-get update && apt-get -y install \
+      automake \
+      build-essential \
+      curl \
+      libssl-dev \
+      git \
+      libtool \
+      python \
+      python2.7-dev \
+      python-software-properties \
+      python-setuptools \
+      zip \
+      unzip \
+      wget \
+      cmake \
+      openjdk-8-jdk-headless
+
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
+
+RUN wget -O /tmp/bazel.sh https://github.com/bazelbuild/bazel/releases/download/$bazelVersion/bazel-$bazelVersion-installer-linux-x86_64.sh \
+      && chmod +x /tmp/bazel.sh \
+      && /tmp/bazel.sh
+
+ADD bazelrc /root/.bazelrc
+ADD scripts/compile-platform.sh /compile-platform.sh

@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include <list>
@@ -39,6 +42,11 @@ TEST(FieldsGrouping, test_sametuple) {
   task_ids.push_back(2);
   task_ids.push_back(4);
   task_ids.push_back(8);
+  std::vector<sp_int32> unsorted_ids;
+  unsorted_ids.push_back(4);
+  unsorted_ids.push_back(2);
+  unsorted_ids.push_back(8);
+  unsorted_ids.push_back(0);
 
   heron::proto::api::InputStream is;
   heron::proto::api::StreamSchema* s = is.mutable_grouping_fields();
@@ -47,6 +55,7 @@ TEST(FieldsGrouping, test_sametuple) {
   kt->set_key("field1");
 
   heron::stmgr::FieldsGrouping* g = new heron::stmgr::FieldsGrouping(is, *s, task_ids);
+  heron::stmgr::FieldsGrouping* g_unsorted = new heron::stmgr::FieldsGrouping(is, *s, unsorted_ids);
   heron::proto::system::HeronDataTuple tuple;
   tuple.add_values("dummy");
 
@@ -54,13 +63,18 @@ TEST(FieldsGrouping, test_sametuple) {
   for (sp_int32 i = 0; i < 1000; ++i) {
     std::vector<sp_int32> dests;
     g->GetListToSend(tuple, dests);
+    std::vector<sp_int32> unsorted_dests;
+    g_unsorted->GetListToSend(tuple, unsorted_dests);
     EXPECT_EQ(dests.size(), (sp_uint32)1);
+    EXPECT_EQ(unsorted_dests.size(), (sp_uint32)1);
+    EXPECT_EQ(dests[0], unsorted_dests[0]);
     all_dests.insert(dests.front());
   }
 
   EXPECT_EQ(all_dests.size(), (sp_uint32)1);
 
   delete g;
+  delete g_unsorted;
 }
 
 // Test that only the relevant fields are hashed

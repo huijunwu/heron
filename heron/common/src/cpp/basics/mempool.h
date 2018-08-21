@@ -1,18 +1,22 @@
-/*
- * Copyright 2016 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
+
 #ifndef MEM_POOL_H
 #define MEM_POOL_H
 
@@ -60,7 +64,7 @@ class MemPool {
   template<typename M>
   void release(M* ptr) {
     std::type_index type = typeid(M);
-    sp_int32 size = mem_pool_map_[type].size() * sizeof(M);
+    sp_int32 size = mem_pool_map_[type].size();
     // if pool size reaches the limit, release the memory
     // otherwise put the memory into pool
     if (size >= pool_limit_) {
@@ -70,10 +74,14 @@ class MemPool {
     }
   }
 
+  void set_pool_max_number_of_messages(sp_int32 _pool_limit) {
+    pool_limit_ = _pool_limit;
+  }
+
  private:
   // each type has its own separate mem pool entry
   std::unordered_map<std::type_index, std::vector<B*>> mem_pool_map_;
-  // each mem pool size should not exceed the pool_limit_
+  // number of message in each mem pool should not exceed the pool_limit_
   sp_int32 pool_limit_;
 };
 
@@ -93,6 +101,8 @@ void __global_protobuf_pool_release__(T* _m) {
   std::lock_guard<std::mutex> guard(__global_protobuf_pool_mutex__);
   __global_protobuf_pool__->release(_m);
 }
+
+void __global_protobuf_pool_set_pool_max_number_of_messages__(sp_int32 _pool_limit);
 
 #endif
 

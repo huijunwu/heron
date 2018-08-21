@@ -1,3 +1,20 @@
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ########### These all have default values as shown
 ########### All the config associated with time is in the unit of milli-seconds, unless otherwise specified.
 ########### All the config associated with data size is in the unit of bytes, unless otherwise specified.
@@ -35,9 +52,6 @@ heron.metrics.max.exceptions.per.message.count: 1024
 
 ### heron.streammgr.* configs are for the stream manager
 
-# Maximum size in bytes of a packet to be send out from stream manager
-heron.streammgr.packet.maximum.size.bytes: 102400
-
 # The tuple cache (used for batching) can be drained in two ways: (a) Time based (b) size based
 
 # The frequency in ms to drain the tuple cache in stream manager
@@ -50,6 +64,9 @@ heron.streammgr.stateful.buffer.size.mb: 100
 # The sized based threshold in MB for draining the tuple cache
 heron.streammgr.cache.drain.size.mb: 100
 
+# The max number of messages in the memory pool for each message type
+heron.streammgr.mempool.max.message.number: 512
+
 # For efficient acknowledgement
 heron.streammgr.xormgr.rotatingmap.nbuckets: 3
 
@@ -59,8 +76,11 @@ heron.streammgr.client.reconnect.interval.sec: 1
 # The reconnect interval to tamster in second for stream manager client
 heron.streammgr.client.reconnect.tmaster.interval.sec: 1
 
+# The max reconnect attempts to tmaster for stream manager client
+heron.streammgr.client.reconnect.tmaster.max.attempts: 30
+
 # The maximum packet size in MB of stream manager's network options
-heron.streammgr.network.options.maximum.packet.mb: 100
+heron.streammgr.network.options.maximum.packet.mb: 10
 
 # The interval in seconds to send heartbeat
 heron.streammgr.tmaster.heartbeat.interval.sec: 10
@@ -138,6 +158,9 @@ heron.metricsmgr.network.options.socket.send.buffer.size.bytes: 6553600
 # The maximum socket's received buffer size in bytes of metricsmgr's network options
 heron.metricsmgr.network.options.socket.received.buffer.size.bytes: 8738000
 
+# The maximum packet size that metrics mgr can read
+heron.metricsmgr.network.options.maximum.packetsize.bytes: 1048576
+
 # Attempts to restart IMetricsSink once failure ia occurred
 # heron.metricsmgr.sink.retry.attempts: 10
 
@@ -145,6 +168,9 @@ heron.metricsmgr.network.options.socket.received.buffer.size.bytes: 8738000
 # heron.metricsmgr.exit.in.sinks.failure: 0
 
 ### heron.instance.* configs are for the instances
+
+# The maximum size of packets that instance can read
+heron.instance.network.options.maximum.packetsize.bytes: 10485760
 
 # The queue capacity (num of items) in bolt for buffer packets to read from stream manager
 heron.instance.internal.bolt.read.queue.capacity: 128
@@ -219,7 +245,7 @@ heron.instance.reconnect.streammgr.times: 60
 heron.instance.reconnect.metricsmgr.interval.sec: 5
 heron.instance.reconnect.metricsmgr.times: 60
 
-# The interval in second for an instance to sample its system metrics, for instance, cpu load.
+# The interval in second for an instance to sample its system metrics, for instance, CPU load.
 heron.instance.metrics.system.sample.interval.sec: 10
 
 # For efficient acknowledgement

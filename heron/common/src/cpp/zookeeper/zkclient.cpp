@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,33 +139,19 @@ ZKClient::ZKClient(const std::string& hostportlist, EventLoop* eventLoop,
 }
 
 void ZKClient::Init() {
-  zkaction_responses_ = new PCQueue<CallBack*>();
-  auto zkaction_response_cb = [this](EventLoop::Status status) {
-    this->OnZkActionResponse(status);
-  };
-
-  if (pipe(pipers_) < 0) {
-    LOG(FATAL) << "Pipe failed in ZKClient";
-  }
-  sp_int32 flags;
-  if ((flags = fcntl(pipers_[0], F_GETFL, 0)) < 0 ||
-      fcntl(pipers_[0], F_SETFL, flags | O_NONBLOCK) < 0 ||
-      eventLoop_->registerForRead(pipers_[0], std::move(zkaction_response_cb), true) != 0) {
-    LOG(FATAL) << "fcntl failed in ZKClient";
-  }
+  piper_ = new Piper(eventLoop_);
   zoo_deterministic_conn_order(0);  // even distribution of clients on the server
   InitZKHandle();
 }
 
 // Destructor.
 ZKClient::~ZKClient() {
-  if (eventLoop_) {
-    CHECK_EQ(eventLoop_->unRegisterForRead(pipers_[0]), 0);
-  }
-  close(pipers_[0]);
-  close(pipers_[1]);
-  delete zkaction_responses_;
   zookeeper_close(zk_handle_);
+  // zookeeper_close() depends on piper_
+  // when HeronZKStateMgr::GlobalWatchEventHandler() and GetCompletionWatcher
+  // are called at the same time in two threads,
+  // thus `delete piper_` after zookeeper_close() joins all zk_client threads.
+  delete piper_;
 }
 
 //
@@ -350,55 +339,17 @@ void ZKClient::InitZKHandle() {
   }
 }
 
-void ZKClient::SignalMainThread() {
-  // This need not be protected by any mutex.
-  // The os will take care of that.
-  int rc = write(pipers_[1], "a", 1);
-  if (rc != 1) {
-    LOG(FATAL) << "Write to pipe failed in ZkClient with return code:  " << rc;
-  }
-}
-
-void ZKClient::OnZkActionResponse(EventLoop::Status _status) {
-  if (_status == EventLoop::READ_EVENT) {
-    char buf[1];
-    ssize_t readcount = read(pipers_[0], buf, 1);
-    if (readcount == 1) {
-      bool dequeued = false;
-      CallBack* cb = zkaction_responses_->trydequeue(dequeued);
-      if (cb) {
-        cb->Run();
-      }
-    } else {
-      LOG(ERROR) << "In Server read from pipers returned " << readcount << " errno " << errno
-                 << std::endl;
-      if (readcount < 0 && (errno == EAGAIN || errno == EINTR)) {
-        // Never mind. we will try again
-        return;
-      } else {
-        // We really don't know what to do here.
-        // TODO(kramasamy): Figure out a way to get the hell out of here
-        return;
-      }
-    }
-  }
-  return;
-}
-
 void ZKClient::ZkActionCb(sp_int32 rc, VCallback<sp_int32> cb) {
-  zkaction_responses_->enqueue(CreateCallback(&RunUserCb, rc, std::move(cb)));
-  SignalMainThread();
+  piper_->ExecuteInEventLoop(std::bind(&RunUserCb, rc, std::move(cb)));
 }
 
 void ZKClient::ZkWatcherCb(VCallback<> cb) {
-  zkaction_responses_->enqueue(CreateCallback(&RunWatcherCb, std::move(cb)));
-  SignalMainThread();
+  piper_->ExecuteInEventLoop(std::bind(&RunWatcherCb, std::move(cb)));
 }
 
 void ZKClient::SendWatchEvent(const ZkWatchEvent& event) {
   CHECK(client_global_watcher_cb_);
-  zkaction_responses_->enqueue(CreateCallback(&RunWatchEventCb, client_global_watcher_cb_, event));
-  SignalMainThread();
+  piper_->ExecuteInEventLoop(std::bind(&RunWatchEventCb, client_global_watcher_cb_, event));
 }
 
 const std::string ZKClient::state2String(sp_int32 _state) {

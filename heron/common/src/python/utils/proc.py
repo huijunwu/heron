@@ -1,16 +1,23 @@
-# Copyright 2017 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' proc.py: subprocess and subprocess's stdout/stderr management '''
 from threading import Thread
 
@@ -22,9 +29,9 @@ def _stream_process_fileno(fileno, handler):
   """
   while 1:
     line = fileno.readline()
+    handler(line)
     if not line:
       break
-    handler(line)
 
 def stream_process_stdout(process, handler):
   """ Stream the stdout for a process out to display
@@ -76,13 +83,21 @@ def async_stream_process_stderr(process, handler):
 
 class StringBuilder(object):
   def __init__(self):
-    self.str = ""
+    self.end = False
+    self.strs = []
 
   def add(self, line):
-    self.str += line
+    if not line:
+      self.end = True
+    else:
+      self.strs.append(line)
 
   def result(self):
-    return self.str
+    while True:
+      if self.end:
+        return ''.join(self.strs)
+      else:
+        continue
 
 def async_stdout_builder(proc):
   """ Save stdout into string builder

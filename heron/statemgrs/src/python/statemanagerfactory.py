@@ -1,16 +1,23 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 '''
 statemanagerfactory.py
 Factory function that instantiates and connects to the requested
@@ -19,7 +26,6 @@ Returns these state managers.
 '''
 
 import os
-import traceback
 
 
 from heron.statemgrs.src.python.filestatemanager import FileStateManager
@@ -33,14 +39,18 @@ def get_all_state_managers(conf):
   Instantiates them, start and then return them.
   """
   state_managers = []
-  state_managers.extend(get_all_zk_state_managers(conf))
-  state_managers.extend(get_all_file_state_managers(conf))
-  return state_managers
+  try:
+    state_managers.extend(get_all_zk_state_managers(conf))
+    state_managers.extend(get_all_file_state_managers(conf))
+    return state_managers
+  except Exception as ex:
+    LOG.error("Exception while getting state_managers.")
+    raise ex
 
 def get_all_zk_state_managers(conf):
   """
-  Connects to all the zookeeper state_managers and returns
-  the connected state_managers instances.
+  Creates all the zookeeper state_managers and returns
+  them in a list
   """
   state_managers = []
   state_locations = conf.get_state_locations_of_type("zookeeper")
@@ -63,11 +73,6 @@ def get_all_zk_state_managers(conf):
     rootpath = location['rootpath']
     LOG.info("Connecting to zk hostports: " + str(hostportlist) + " rootpath: " + rootpath)
     state_manager = ZkStateManager(name, hostportlist, rootpath, tunnelhost)
-    try:
-      state_manager.start()
-    except Exception:
-      LOG.error("Exception while connecting to state_manager.")
-      LOG.debug(traceback.format_exc())
     state_managers.append(state_manager)
 
   return state_managers
@@ -83,11 +88,6 @@ def get_all_file_state_managers(conf):
     rootpath = os.path.expanduser(location['rootpath'])
     LOG.info("Connecting to file state with rootpath: " + rootpath)
     state_manager = FileStateManager(name, rootpath)
-    try:
-      state_manager.start()
-    except Exception:
-      LOG.error("Exception while connecting to state_manager.")
-      traceback.print_exc()
     state_managers.append(state_manager)
 
   return state_managers

@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 //////////////////////////////////////////////////////
@@ -33,18 +36,17 @@
 namespace heron {
 namespace common {
 
-MetricsMgrSt::MetricsMgrSt(const sp_string& _my_hostname, sp_int32 _my_port,
-                           sp_int32 _metricsmgr_port, const sp_string& _component,
-                           const sp_string& _task_id, sp_int32 _interval, EventLoop* eventLoop) {
-  NetworkOptions options;
-  options.set_host("localhost");
-  options.set_port(_metricsmgr_port);
-  options.set_max_packet_size(1024 * 1024);
-  options.set_socket_family(PF_INET);
-  client_ = new MetricsMgrClient(_my_hostname, _my_port, _component, _task_id, eventLoop, options);
+MetricsMgrSt::MetricsMgrSt(sp_int32 _metricsmgr_port, sp_int32 _interval, EventLoop* eventLoop) {
+  options_.set_host("127.0.0.1");
+  options_.set_port(_metricsmgr_port);
+  options_.set_max_packet_size(1024 * 1024);
+  options_.set_socket_family(PF_INET);
+  // client_ will be initialized in Start()
+  client_ = nullptr;
   timer_cb_ = [this](EventLoop::Status status) { this->gather_metrics(status); };
   timerid_ = eventLoop->registerTimer(timer_cb_, true, _interval * 1000000);
   CHECK_GE(timerid_, 0);
+  eventLoop_ = eventLoop;
 }
 
 MetricsMgrSt::~MetricsMgrSt() {
@@ -53,6 +55,13 @@ MetricsMgrSt::~MetricsMgrSt() {
   for (auto iter = metrics_.begin(); iter != metrics_.end(); ++iter) {
     delete iter->second;
   }
+}
+
+void MetricsMgrSt::Start(const sp_string& _my_hostname, sp_int32 _my_port,
+     const sp_string& _component_id, const sp_string& _instance_id) {
+  CHECK(client_ == nullptr) << "MetricsMgrClient started already";
+  client_ = new MetricsMgrClient(_my_hostname, _my_port, _component_id, _instance_id,
+                                 -1, eventLoop_, options_);
 }
 
 void MetricsMgrSt::RefreshTMasterLocation(const proto::tmaster::TMasterLocation& location) {

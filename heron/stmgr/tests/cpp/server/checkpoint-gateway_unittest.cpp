@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include <limits>
@@ -113,8 +116,8 @@ static heron::proto::api::Topology* GenerateDummyTopology(
   // Set message timeout
   heron::proto::api::Config* topology_config = topology->mutable_topology_config();
   heron::proto::api::Config::KeyValue* kv = topology_config->add_kvs();
-  kv->set_key(heron::config::TopologyConfigVars::TOPOLOGY_STATEFUL_ENABLED);
-  kv->set_value("true");
+  kv->set_key(heron::config::TopologyConfigVars::TOPOLOGY_RELIABILITY_MODE);
+  kv->set_value("ATLEAST_ONCE");
 
   // Set state
   topology->set_state(heron::proto::api::RUNNING);
@@ -206,7 +209,7 @@ void drainer1(sp_int32 _task_id, heron::proto::system::HeronTupleSet2* _tup) {
   delete _tup;
 }
 
-void drainer2(heron::proto::stmgr::TupleStreamMessage2* _tup) {
+void drainer2(heron::proto::stmgr::TupleStreamMessage* _tup) {
   drainer2_tuples.push_back(_tup->task_id());
   delete _tup;
 }
@@ -224,9 +227,8 @@ TEST(CheckpointGateway, emptyckptid) {
       auto neighbour_calculator = new heron::stmgr::NeighbourCalculator();
       neighbour_calculator->Reconstruct(*pplan);
       EventLoop* dummyLoop = new EventLoopImpl();
-      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt("localhost", 11000, 11001,
-                                                                   "_stmgr", "_stmgr", 100,
-                                                                   dummyLoop);
+      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt(11001, 100, dummyLoop);
+      dummy_metrics_client_->Start("127.0.0.1", 11000, "_stmgr", "_stmgr");
       auto gateway = new heron::stmgr::CheckpointGateway(1024 * 1024, neighbour_calculator,
                                                          dummy_metrics_client_,
                                                          drainer1, drainer2, drainer3);
@@ -281,9 +283,8 @@ TEST(CheckpointGateway, normaloperation) {
       auto neighbour_calculator = new heron::stmgr::NeighbourCalculator();
       neighbour_calculator->Reconstruct(*pplan);
       EventLoop* dummyLoop = new EventLoopImpl();
-      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt("localhost", 11000, 11001,
-                                                                   "_stmgr", "_stmgr", 100,
-                                                                   dummyLoop);
+      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt(11001, 100, dummyLoop);
+      dummy_metrics_client_->Start("127.0.0.1", 11000, "_stmgr", "_stmgr");
       auto gateway = new heron::stmgr::CheckpointGateway(1024 * 1024, neighbour_calculator,
                                                          dummy_metrics_client_,
                                                          drainer1, drainer2, drainer3);
@@ -371,9 +372,8 @@ TEST(CheckpointGateway, overflow) {
       auto neighbour_calculator = new heron::stmgr::NeighbourCalculator();
       neighbour_calculator->Reconstruct(*pplan);
       EventLoop* dummyLoop = new EventLoopImpl();
-      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt("localhost", 11000, 11001,
-                                                                   "_stmgr", "_stmgr", 100,
-                                                                   dummyLoop);
+      auto dummy_metrics_client_ = new heron::common::MetricsMgrSt(11001, 100, dummyLoop);
+      dummy_metrics_client_->Start("127.0.0.1", 11000, "_stmgr", "_stmgr");
       auto gateway = new heron::stmgr::CheckpointGateway(1024 * 1024, neighbour_calculator,
                                                          dummy_metrics_client_,
                                                          drainer1, drainer2, drainer3);

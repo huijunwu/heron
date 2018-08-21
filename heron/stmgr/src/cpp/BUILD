@@ -72,6 +72,7 @@ cc_library(
         "manager/stmgr-client.cpp",
         "manager/stmgr-clientmgr.cpp",
         "manager/stmgr-server.cpp",
+        "manager/instance-server.cpp",
         "manager/stmgr.cpp",
         "manager/stream-consumers.cpp",
         "manager/tmaster-client.cpp",
@@ -82,6 +83,7 @@ cc_library(
         "manager/stmgr-client.h",
         "manager/stmgr-clientmgr.h",
         "manager/stmgr-server.h",
+        "manager/instance-server.h",
         "manager/stmgr.h",
         "manager/stream-consumers.h",
         "manager/tmaster-client.h",
@@ -106,7 +108,7 @@ cc_library(
         "//heron/common/src/cpp/config:config-cxx",
         "//heron/common/src/cpp/metrics:metrics-cxx",
         "//heron/statemgrs/src/cpp:statemgrs-cxx",
-        "//third_party/yaml-cpp:yaml-cxx",
+        "@com_github_jbeder_yaml_cpp//:yaml-cxx",
     ],
     linkstatic = 1,
 )
@@ -134,7 +136,7 @@ cc_binary(
         "//heron/common/src/cpp/zookeeper:zookeeper-cxx",
         "//heron/common/src/cpp/metrics:metrics-cxx",
         "//heron/statemgrs/src/cpp:statemgrs-cxx",
-        "//third_party/yaml-cpp:yaml-cxx",
+        "@com_github_jbeder_yaml_cpp//:yaml-cxx",
     ],
     linkstatic = 1,
 )

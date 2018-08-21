@@ -1,6 +1,3 @@
-load("/tools/rules/java_tests", "java_tests")
-load("/tools/rules/heron_deps", "heron_java_proto_files")
-
 test_deps_files = \
   heron_java_proto_files() + [
     "//heron/ckptmgr/src/java:ckptmgr-java",
@@ -21,7 +18,7 @@ java_library(
 
 java_tests(
   test_classes = [
-    "com.twitter.heron.ckptmgr.CheckpointManagerServerTest",
+    "org.apache.heron.ckptmgr.CheckpointManagerServerTest",
   ],
   runtime_deps = [":ckptmgr-tests"],
   size = "small",

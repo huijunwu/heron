@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 ////////////////////////////////////////////////////////////////
@@ -41,18 +44,25 @@ class TopologyConfigVars {
   static const sp_string TOPOLOGY_SERIALIZER_CLASSNAME;
   static const sp_string TOPOLOGY_TICK_TUPLE_FREQ_SECS;
   static const sp_string TOPOLOGY_ENABLE_MESSAGE_TIMEOUTS;
+  // This is deprecated. Will be removed from future releases
   static const sp_string TOPOLOGY_ENABLE_ACKING;
+  enum TopologyReliabilityMode {
+    ATMOST_ONCE,
+    ATLEAST_ONCE,
+    EFFECTIVELY_ONCE
+  };
+  static const sp_string TOPOLOGY_RELIABILITY_MODE;
   static const sp_string TOPOLOGY_CONTAINER_CPU_REQUESTED;
   static const sp_string TOPOLOGY_CONTAINER_RAM_REQUESTED;
-  static const sp_string TOPOLOGY_STATEFUL_ENABLED;
   static const sp_string TOPOLOGY_STATEFUL_CHECKPOINT_INTERVAL_SECONDS;
   static const sp_string TOPOLOGY_STATEFUL_START_CLEAN;
-  static const sp_string TOPOLOGY_EXACTLYONCE_ENABLED;
+  static const sp_string TOPOLOGY_DROPTUPLES_UPON_BACKPRESSURE;
   static const sp_string TOPOLOGY_NAME;
   static const sp_string TOPOLOGY_TEAM_NAME;
   static const sp_string TOPOLOGY_TEAM_EMAIL;
   static const sp_string TOPOLOGY_CAP_TICKET;
   static const sp_string TOPOLOGY_PROJECT_NAME;
+  static const sp_string TOPOLOGY_COMPONENT_OUTPUT_BPS;
 };
 }  // namespace config
 }  // namespace heron

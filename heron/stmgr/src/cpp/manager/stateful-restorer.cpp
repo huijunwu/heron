@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include "manager/stateful-restorer.h"
@@ -22,7 +25,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include "manager/stmgr-server.h"
+#include "manager/instance-server.h"
 #include "manager/ckptmgr-client.h"
 #include "manager/stmgr-clientmgr.h"
 #include "util/tuple-cache.h"
@@ -50,7 +53,7 @@ const sp_string METRIC_INSTANCE_RESTORE_RESPONSES_IGNORED = "__instance_restore_
 
 StatefulRestorer::StatefulRestorer(CkptMgrClient* _ckptmgr,
                              StMgrClientMgr* _clientmgr, TupleCache* _tuple_cache,
-                             StMgrServer* _server,
+                             InstanceServer* _server,
                              common::MetricsMgrSt* _metrics_manager_client,
                              std::function<void(proto::system::StatusCode,
                                                 std::string, sp_int64)> _restore_done_watcher) {
@@ -76,6 +79,7 @@ StatefulRestorer::~StatefulRestorer() {
 }
 
 void StatefulRestorer::StartRestore(const std::string& _checkpoint_id, sp_int64 _restore_txid,
+                                    const std::unordered_set<sp_int32>& _local_taskids,
                                     proto::system::PhysicalPlan* _pplan) {
   multi_count_metric_->scope(METRIC_START_RESTORE)->incr();
   if (in_progress_) {
@@ -99,12 +103,7 @@ void StatefulRestorer::StartRestore(const std::string& _checkpoint_id, sp_int64 
   in_progress_ = true;
   clients_connections_pending_ = true;
   instance_connections_pending_ = true;
-  std::vector<proto::system::Instance*> instances;
-  server_->GetInstanceInfo(instances);
-  local_taskids_.clear();
-  for (auto instance : instances) {
-    local_taskids_.insert(instance->info().task_id());
-  }
+  local_taskids_ = _local_taskids;
   restore_pending_ = local_taskids_;
   get_ckpt_pending_ = local_taskids_;
   checkpoint_id_ = _checkpoint_id;
@@ -118,23 +117,32 @@ void StatefulRestorer::StartRestore(const std::string& _checkpoint_id, sp_int64 
     // Its possible that this is really a restore while we were already in progress
     // and there was no change in pplan. In which case there would be no new
     // connections to restore
+    LOG(INFO) << "All Stmgr have already connected to their peers in this restore";
     clients_connections_pending_ = false;
   }
   if (server_->HaveAllInstancesConnectedToUs()) {
+    LOG(INFO) << "All Instances have already connected to us in this restore";
     instance_connections_pending_ = false;
   }
 }
 
 void StatefulRestorer::GetCheckpoints() {
   for (auto task_id : get_ckpt_pending_) {
-    ckptmgr_->GetInstanceState(*(server_->GetInstanceInfo(task_id)), checkpoint_id_);
-    multi_count_metric_->scope(METRIC_CKPT_REQUESTS)->incr();
+    auto instance_info = server_->GetInstanceInfo(task_id);
+    if (instance_info) {
+      ckptmgr_->GetInstanceState(*instance_info, checkpoint_id_);
+      multi_count_metric_->scope(METRIC_CKPT_REQUESTS)->incr();
+    } else {
+      LOG(ERROR) << "Could not send GetCheckpoint message for checkpoint "
+                 << checkpoint_id_ << " for task " << task_id
+                 << " because it is not connected to us";
+    }
   }
 }
 
 void StatefulRestorer::HandleCheckpointState(proto::system::StatusCode _status, sp_int32 _task_id,
-                                       sp_string _checkpoint_id,
-                                       const proto::ckptmgr::InstanceStateCheckpoint& _state) {
+    sp_string _checkpoint_id,
+    const proto::ckptmgr::InstanceStateCheckpoint& _state) {
   LOG(INFO) << "Got InstanceState from checkpoint mgr for task " << _task_id
             << " and checkpoint " << _state.checkpoint_id();
   multi_count_metric_->scope(METRIC_CKPT_RESPONSES)->incr();

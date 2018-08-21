@@ -24,7 +24,7 @@ setup(
   description='Python Topology API for Heron',
   long_description=long_description,
 
-  url='https://github.com/twitter/heron',
+  url='https://github.com/apache/incubator-heron',
 
   author='Heron Team',
   author_email='heronstreaming@gmail.com',
@@ -35,6 +35,9 @@ setup(
     'Intended Audience :: Developers',
 
     'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
+    'Programming Language :: Python :: 3.6',
   ],
 
   keywords='heron topology python',

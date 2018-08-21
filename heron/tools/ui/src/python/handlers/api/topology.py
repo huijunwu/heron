@@ -1,16 +1,23 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' topology.py '''
 import json
 import time
@@ -43,7 +50,7 @@ class TopologyExceptionSummaryHandler(base.BaseHandler):
         self.write(dict())
         return
 
-      if not lplan.has_key('spouts') or not lplan.has_key('bolts'):
+      if not 'spouts' in lplan or not 'bolts' in lplan:
         self.write(dict())
         return
       comp_names = lplan['spouts'].keys()
@@ -89,15 +96,15 @@ class ListTopologiesJsonHandler(base.BaseHandler):
     result = dict()
 
     # now convert some of the fields to be displayable
-    for cluster, cluster_value in topologies.iteritems():
+    for cluster, cluster_value in topologies.items():
       result[cluster] = dict()
-      for environ, environ_value in cluster_value.iteritems():
+      for environ, environ_value in cluster_value.items():
         result[cluster][environ] = dict()
-        for topology, topology_value in environ_value.iteritems():
+        for topology, topology_value in environ_value.items():
           if "jobname" not in topology_value or topology_value["jobname"] is None:
             continue
 
-          if topology_value.has_key("submission_time"):
+          if "submission_time" in topology_value:
             topology_value["submission_time"] = topology_value["submission_time"]
           else:
             topology_value["submission_time"] = '-'
@@ -122,44 +129,13 @@ class TopologyLogicalPlanJsonHandler(base.BaseHandler):
     start_time = time.time()
     lplan = yield access.get_logical_plan(cluster, environ, topology)
 
-    if not lplan:
-      self.write(dict())
-      return
-
-    if not lplan.has_key('spouts') or not lplan.has_key('bolts'):
-      self.write(dict())
-      return
-
-    # format the logical plan as required by the web (because of Ambrose)
-    # first, spouts followed by bolts
-    spouts_map = dict()
-    for name, value in lplan['spouts'].items():
-      spouts_map[name] = dict(
-          outputs=value["outputs"],
-          spout_type=value["type"],
-          spout_source=value["source"],
-      )
-
-    bolts_map = dict()
-    for name, value in lplan['bolts'].items():
-      bolts_map[name] = dict(
-          inputComponents=[i['component_name'] for i in value['inputs']],
-          inputs=value["inputs"],
-          outputs=value["outputs"]
-      )
-
-    diameter = common.graph.TopologyDAG(lplan).diameter()
     # construct the result
     result = dict(
         status="success",
         message="",
         version=common.VERSION,
         executiontime=time.time() - start_time,
-        result=dict(
-            stages=diameter,
-            spouts=spouts_map,
-            bolts=bolts_map
-        )
+        result=lplan
     )
 
     self.write(result)

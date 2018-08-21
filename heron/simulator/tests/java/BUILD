@@ -1,14 +1,12 @@
-load("/tools/rules/java_tests", "java_tests")
-load("/tools/rules/heron_deps", "heron_java_proto_files")
-
 java_library(
     name = "simulator-tests",
     srcs = glob(["**/*.java"]),
     deps =  heron_java_proto_files() + [
-        "//heron/api/src/java:api-java",
+        "//heron/api/src/java:api-java-low-level",
         "//heron/common/src/java:basics-java",
         "//heron/common/src/java:config-java",
         "//heron/common/src/java:utils-java",
+        "//heron/instance/src/java:instance-java",
         "//heron/simulator/src/java:simulator-java",
         "//third_party/java:mockito",
         "//third_party/java:junit4",
@@ -17,18 +15,17 @@ java_library(
 
 java_tests(
     test_classes = [
-        "com.twitter.heron.simulator.executors.InstanceExecutorTest",
-        "com.twitter.heron.simulator.grouping.AllGroupingTest",
-        "com.twitter.heron.simulator.grouping.CustomGroupingTest",
-        "com.twitter.heron.simulator.grouping.FieldsGroupingTest",
-        "com.twitter.heron.simulator.grouping.LowestGroupingTest",
-        "com.twitter.heron.simulator.grouping.ShuffleGroupingTest",
-        "com.twitter.heron.simulator.utils.PhysicalPlanUtilTest",
-        "com.twitter.heron.simulator.utils.RotatingMapTest",
-        "com.twitter.heron.simulator.utils.StreamConsumersTest",
-        "com.twitter.heron.simulator.utils.TupleCacheTest",
-        "com.twitter.heron.simulator.utils.XORManagerTest",
-        "com.twitter.heron.simulator.SimulatorTest",
+        "org.apache.heron.simulator.executors.InstanceExecutorTest",
+        "org.apache.heron.simulator.grouping.AllGroupingTest",
+        "org.apache.heron.simulator.grouping.CustomGroupingTest",
+        "org.apache.heron.simulator.grouping.FieldsGroupingTest",
+        "org.apache.heron.simulator.grouping.LowestGroupingTest",
+        "org.apache.heron.simulator.grouping.ShuffleGroupingTest",
+        "org.apache.heron.simulator.utils.TopologyManagerTest",
+        "org.apache.heron.simulator.utils.RotatingMapTest",
+        "org.apache.heron.simulator.utils.TupleCacheTest",
+        "org.apache.heron.simulator.utils.XORManagerTest",
+        "org.apache.heron.simulator.SimulatorTest",
     ],
     runtime_deps = [
         ":simulator-tests",

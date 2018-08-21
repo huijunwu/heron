@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #ifndef SRC_CPP_SVCS_STMGR_SRC_MANAGER_STMGR_CLIENT_H_
@@ -38,13 +41,14 @@ class StMgrClient : public Client {
   StMgrClient(EventLoop* eventLoop, const NetworkOptions& _options, const sp_string& _topology_name,
               const sp_string& _topology_id, const sp_string& _our_id, const sp_string& _other_id,
               StMgrClientMgr* _client_manager,
-              heron::common::MetricsMgrSt* _metrics_manager_client);
+              heron::common::MetricsMgrSt* _metrics_manager_client,
+              bool _droptuples_upon_backpressure);
   virtual ~StMgrClient();
 
   void Quit();
 
   // Return true if successful in sending the message. false otherwise
-  bool SendTupleStreamMessage(proto::stmgr::TupleStreamMessage2& _msg);
+  bool SendTupleStreamMessage(proto::stmgr::TupleStreamMessage& _msg);
   void SendStartBackPressureMessage();
   void SendStopBackPressureMessage();
   void SendDownstreamStatefulCheckpoint(proto::ckptmgr::DownstreamStatefulCheckpoint* _message);
@@ -56,7 +60,7 @@ class StMgrClient : public Client {
 
  private:
   void HandleHelloResponse(void*, proto::stmgr::StrMgrHelloResponse* _response, NetworkErrorCode);
-  void HandleTupleStreamMessage(proto::stmgr::TupleStreamMessage2* _message);
+  void HandleTupleStreamMessage(proto::stmgr::TupleStreamMessage* _message);
 
   void OnReConnectTimer();
   void SendHelloRequest();
@@ -78,12 +82,16 @@ class StMgrClient : public Client {
 
   // Configs to be read
   sp_int32 reconnect_other_streammgrs_interval_sec_;
+  sp_int32 reconnect_other_streammgrs_max_attempt_;
 
   // Counters
   sp_int64 ndropped_messages_;
+  sp_int32 reconnect_attempts_;
 
   // Have we registered ourselves
   bool is_registered_;
+  // Do we drop tuples upon backpressure
+  bool droptuples_upon_backpressure_;
 };
 
 }  // namespace stmgr

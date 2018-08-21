@@ -1,31 +1,40 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 '''bolt_instance.py: module for base bolt for python topology'''
 
 import time
 import Queue
 
-from heron.api.src.python import global_metrics
-from heron.api.src.python import api_constants
-from heron.api.src.python import Stream
-from heron.common.src.python.utils.log import Log
-from heron.common.src.python.utils.tuple import TupleHelper, HeronTuple
-from heron.common.src.python.utils.metrics import BoltMetrics
-from heron.common.src.python.utils.misc import SerializerHelper
-from heron.proto import tuple_pb2
+import heronpy.api.api_constants as api_constants
+from heronpy.api.state.stateful_component import StatefulComponent
+from heronpy.api.stream import Stream
 
-import heron.common.src.python.system_constants as system_constants
+from heron.common.src.python.utils.log import Log
+
+from heron.proto import topology_pb2, tuple_pb2, ckptmgr_pb2
+
+from heron.instance.src.python.utils.metrics import BoltMetrics
+from heron.instance.src.python.utils.tuple import TupleHelper, HeronTuple
+
+import heron.instance.src.python.utils.system_constants as system_constants
 
 from .base_instance import BaseInstance
 
@@ -34,6 +43,7 @@ class BoltInstance(BaseInstance):
 
   def __init__(self, pplan_helper, in_stream, out_stream, looper):
     super(BoltInstance, self).__init__(pplan_helper, in_stream, out_stream, looper)
+    self.topology_state = topology_pb2.TopologyState.Value("PAUSED")
 
     if self.pplan_helper.is_spout:
       raise RuntimeError("No bolt in physical plan")
@@ -41,44 +51,41 @@ class BoltInstance(BaseInstance):
     # bolt_config is auto-typed, not <str -> str> only
     context = self.pplan_helper.context
     self.bolt_metrics = BoltMetrics(self.pplan_helper)
-    self.serializer = SerializerHelper.get_serializer(context)
 
     # acking related
-    self.acking_enabled = context.get_cluster_config().get(api_constants.TOPOLOGY_ENABLE_ACKING,
-                                                           False)
+    mode = context.get_cluster_config().get(api_constants.TOPOLOGY_RELIABILITY_MODE,
+                                            api_constants.TopologyReliabilityMode.ATMOST_ONCE)
+    self.acking_enabled = bool(mode == api_constants.TopologyReliabilityMode.ATLEAST_ONCE)
+    self._initialized_metrics_and_tasks = False
     Log.info("Enable ACK: %s" % str(self.acking_enabled))
 
     # load user's bolt class
     bolt_impl_class = super(BoltInstance, self).load_py_instance(is_spout=False)
     self.bolt_impl = bolt_impl_class(delegate=self)
 
-  def start(self):
+  def start_component(self, stateful_state):
     context = self.pplan_helper.context
-    self.bolt_metrics.register_metrics(context)
+    if not self._initialized_metrics_and_tasks:
+      self.bolt_metrics.register_metrics(context)
+    if self.is_stateful and isinstance(self.bolt_impl, StatefulComponent):
+      self.bolt_impl.init_state(stateful_state)
     self.bolt_impl.initialize(config=context.get_cluster_config(), context=context)
-    context.invoke_hook_prepare()
-
-    # prepare global metrics
-    interval = float(self.sys_config[system_constants.HERON_METRICS_EXPORT_INTERVAL_SEC])
-    collector = context.get_metrics_collector()
-    global_metrics.init(collector, interval)
-
-    # prepare for custom grouping
-    self.pplan_helper.prepare_custom_grouping(context)
-
     # prepare tick tuple
-    self._prepare_tick_tup_timer()
+    if not self._initialized_metrics_and_tasks:
+      self._prepare_tick_tup_timer()
+    self._initialized_metrics_and_tasks = True
+    self.topology_state = topology_pb2.TopologyState.Value("RUNNING")
 
-  def stop(self):
-    self.pplan_helper.context.invoke_hook_cleanup()
-    self.cleanup()
-    self.looper.exit_loop()
+  def stop_component(self):
+    self.topology_state = topology_pb2.TopologyState.Value("PAUSED")
 
   def invoke_activate(self):
-    pass
+    Log.info("Activating Bolt")
+    self.topology_state = topology_pb2.TopologyState.Value("RUNNING")
 
   def invoke_deactivate(self):
-    pass
+    Log.info("Deactivating Bolt")
+    self.topology_state = topology_pb2.TopologyState.Value("PAUSED")
 
   def emit(self, tup, stream=Stream.DEFAULT_STREAM_ID,
            anchors=None, direct_task=None, need_task_ids=False):
@@ -187,6 +194,8 @@ class BoltInstance(BaseInstance):
             self._handle_data_tuple(data_tuple, stream)
         else:
           Log.error("Received tuple neither data nor control")
+      elif isinstance(tuples, ckptmgr_pb2.InitiateStatefulCheckpoint):
+        self.handle_initiate_stateful_checkpoint(tuples, self.bolt_impl)
       else:
         Log.error("Received tuple not instance of HeronTupleSet")
 
@@ -282,6 +291,3 @@ class BoltInstance(BaseInstance):
     fail_latency_ns = (time.time() - tup.creation_time) * system_constants.SEC_TO_NS
     self.pplan_helper.context.invoke_hook_bolt_fail(tup, fail_latency_ns)
     self.bolt_metrics.failed_tuple(tup.stream, tup.component, fail_latency_ns)
-
-  def cleanup(self):
-    pass

@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #ifndef __DUMMY_INSTANCE_H
@@ -36,11 +39,11 @@ class DummyInstance : public Client {
   void Retry() { Start(); }
 
   // Handle incoming message
-  virtual void HandleInstanceResponse(heron::proto::stmgr::RegisterInstanceResponse* _message);
+  virtual void HandleInstanceResponse(void* ctx,
+                                      heron::proto::stmgr::RegisterInstanceResponse* _message,
+                                      NetworkErrorCode status);
   // Handle incoming tuples
   virtual void HandleTupleMessage(heron::proto::system::HeronTupleSet2* _message);
-  // Send tuples
-  virtual void CreateAndSendTupleMessages();
   // Handle the instance assignment message
   virtual void HandleNewInstanceAssignmentMsg(heron::proto::stmgr::NewInstanceAssignmentMessage*);
 
@@ -76,10 +79,15 @@ class DummySpoutInstance : public DummyInstance {
 
  protected:
   // Handle incoming message
-  virtual void HandleInstanceResponse(heron::proto::stmgr::RegisterInstanceResponse* _message);
   virtual void HandleNewInstanceAssignmentMsg(
       heron::proto::stmgr::NewInstanceAssignmentMessage* _msg);
-  virtual void CreateAndSendTupleMessages();
+  void CreateAndSendTupleMessages();
+  virtual void StartBackPressureConnectionCb(Connection* connection) {
+    under_backpressure_ = true;
+  }
+  virtual void StopBackPressureConnectionCb(Connection* _connection) {
+    under_backpressure_ = false;
+  }
 
  private:
   sp_string stream_id_;
@@ -87,6 +95,7 @@ class DummySpoutInstance : public DummyInstance {
   sp_int32 total_msgs_sent_;
   sp_int32 batch_size_;
   bool do_custom_grouping_;
+  bool under_backpressure_;
   // only valid when the above is true
   sp_int32 custom_grouping_dest_task_;
 };
@@ -103,7 +112,6 @@ class DummyBoltInstance : public DummyInstance {
 
  protected:
   // Handle incoming message
-  virtual void HandleInstanceResponse(heron::proto::stmgr::RegisterInstanceResponse* _message);
   // Handle incoming tuples
   virtual void HandleTupleMessage(heron::proto::system::HeronTupleSet2* _message);
   virtual void HandleNewInstanceAssignmentMsg(

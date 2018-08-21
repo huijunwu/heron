@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include "server/dummystmgr.h"
@@ -36,12 +39,16 @@ DummyStMgr::DummyStMgr(EventLoop* eventLoop, const NetworkOptions& options,
       my_host_(myhost),
       my_port_(myport),
       instances_(instances),
-      pplan_(NULL) {
+      pplan_(nullptr),
+      got_restore_message_(false),
+      got_start_message_(false) {
   InstallResponseHandler(new proto::tmaster::StMgrRegisterRequest(),
                          &DummyStMgr::HandleRegisterResponse);
   InstallResponseHandler(new proto::tmaster::StMgrHeartbeatRequest(),
                          &DummyStMgr::HandleHeartbeatResponse);
   InstallMessageHandler(&DummyStMgr::HandleNewAssignmentMessage);
+  InstallMessageHandler(&DummyStMgr::HandleRestoreTopologyStateRequest);
+  InstallMessageHandler(&DummyStMgr::HandleStartProcessingMessage);
 }
 
 DummyStMgr::~DummyStMgr() {}
@@ -152,6 +159,18 @@ void DummyStMgr::SendHeartbeatRequest() {
   request->mutable_stats();
   SendRequest(request, NULL);
   return;
+}
+
+void DummyStMgr::HandleRestoreTopologyStateRequest(
+        proto::ckptmgr::RestoreTopologyStateRequest* _m) {
+  delete _m;
+  got_restore_message_ = true;
+}
+
+void DummyStMgr::HandleStartProcessingMessage(
+        proto::ckptmgr::StartStmgrStatefulProcessing* _m) {
+  delete _m;
+  got_start_message_ = true;
 }
 
 proto::system::PhysicalPlan* DummyStMgr::GetPhysicalPlan() { return pplan_; }

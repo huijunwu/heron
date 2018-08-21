@@ -13,7 +13,6 @@ cc_library(
         "operational-config-vars.cpp",
         "physical-plan-helper.cpp",
         "topology-config-helper.cpp",
-        "topology-config-reader.cpp",
         "topology-config-vars.cpp",
         "yaml-file-reader.cpp",
 
@@ -29,7 +28,6 @@ cc_library(
         "physical-plan-helper.h",
         "reader.h",
         "topology-config-helper.h",
-        "topology-config-reader.h",
         "topology-config-vars.h",
     ],
     hdrs = [ 
@@ -46,7 +44,7 @@ cc_library(
         "//config:config-cxx",
         "//heron/common/src/cpp/network:network-cxx",
         "//heron/proto:proto-cxx",
-        "//third_party/yaml-cpp:yaml-cxx",
+        "@com_github_jbeder_yaml_cpp//:yaml-cxx",
     ],
     linkstatic = 1,
 )

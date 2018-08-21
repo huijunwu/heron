@@ -1,19 +1,27 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' args.py '''
 import argparse
 import os
+import sys
 
 import heron.tools.common.src.python.utils.config as config
 
@@ -85,6 +93,16 @@ def add_cluster_role_env(parser):
   )
   return parser
 
+def add_service_url(parser):
+  '''
+  :param parser:
+  :return:
+  '''
+  parser.add_argument(
+      '--service-url',
+      default="",
+      help='API service end point')
+  return parser
 
 def add_config(parser):
   '''
@@ -153,7 +171,7 @@ def add_dry_run(parser):
   :return:
   '''
   default_format = 'table'
-  resp_formats = ['raw', 'table', 'colored_table']
+  resp_formats = ['raw', 'table', 'colored_table', 'json']
   available_options = ', '.join(['%s' % opt for opt in resp_formats])
 
   def dry_run_resp_format(value):
@@ -173,7 +191,7 @@ def add_dry_run(parser):
   parser.add_argument(
       '--dry-run-format',
       metavar='DRY_RUN_FORMAT',
-      default='table',
+      default='colored_table' if sys.stdout.isatty() else 'table',
       type=dry_run_resp_format,
       help='The format of the dry-run output ([%s], default=%s). '
            'Ignored when dry-run mode is not enabled' % ('|'.join(resp_formats), default_format))

@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include "manager/checkpoint-gateway.h"
@@ -36,7 +39,7 @@ CheckpointGateway::CheckpointGateway(sp_uint64 _drain_threshold,
          NeighbourCalculator* _neighbour_calculator,
          common::MetricsMgrSt* _metrics_manager_client,
          std::function<void(sp_int32, proto::system::HeronTupleSet2*)> _tupleset_drainer,
-         std::function<void(proto::stmgr::TupleStreamMessage2*)> _tuplestream_drainer,
+         std::function<void(proto::stmgr::TupleStreamMessage*)> _tuplestream_drainer,
          std::function<void(sp_int32, proto::ckptmgr::InitiateStatefulCheckpoint*)> _ckpt_drainer)
   : drain_threshold_(_drain_threshold), current_size_(0),
     neighbour_calculator_(_neighbour_calculator),
@@ -70,7 +73,7 @@ void CheckpointGateway::SendToInstance(sp_int32 _task_id,
   size_metric_->SetValue(current_size_);
 }
 
-void CheckpointGateway::SendToInstance(proto::stmgr::TupleStreamMessage2* _message) {
+void CheckpointGateway::SendToInstance(proto::stmgr::TupleStreamMessage* _message) {
   if (current_size_ > drain_threshold_) {
     ForceDrain();
   }
@@ -169,15 +172,15 @@ CheckpointGateway::CheckpointInfo::SendToInstance(proto::system::HeronTupleSet2*
       // This means that we still are expecting a checkpoint marker from this src task id
       return _tuple;
     } else {
-      add(std::make_tuple(_tuple, (proto::stmgr::TupleStreamMessage2*)nullptr,
+      add(std::make_tuple(_tuple, (proto::stmgr::TupleStreamMessage*)nullptr,
                          (proto::ckptmgr::InitiateStatefulCheckpoint*)nullptr), _size);
       return nullptr;
     }
   }
 }
 
-proto::stmgr::TupleStreamMessage2*
-CheckpointGateway::CheckpointInfo::SendToInstance(proto::stmgr::TupleStreamMessage2* _tuple,
+proto::stmgr::TupleStreamMessage*
+CheckpointGateway::CheckpointInfo::SendToInstance(proto::stmgr::TupleStreamMessage* _tuple,
                                                   sp_uint64 _size) {
   if (checkpoint_id_.empty()) {
     return _tuple;
@@ -228,7 +231,7 @@ CheckpointGateway::CheckpointInfo::HandleUpstreamMarker(sp_int32 _src_task_id,
     auto message = new proto::ckptmgr::InitiateStatefulCheckpoint();
     message->set_checkpoint_id(_checkpoint_id);
     add_front(std::make_tuple((proto::system::HeronTupleSet2*)nullptr,
-                              (proto::stmgr::TupleStreamMessage2*)nullptr, message),
+                              (proto::stmgr::TupleStreamMessage*)nullptr, message),
                               message->GetCachedSize());
     return ForceDrain();
   } else {

@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /** @jsx React.DOM */
 
 var ActionButton = React.createClass({
@@ -13,14 +32,21 @@ var ActionButton = React.createClass({
     var textStyle = {
       textAlign: 'left',
     }
+    var caretStyle = {
+      marginLeft: '4px'
+    }
+    var dropdownStyle = {
+      left: 'auto',
+      right: '0'
+    }
     return (
       <div className="btn-group action-button-group visible-on-hover" style={buttonDivStyle}>
-        <button type="button" className="btn btn-sm btn-danger dropdown-toggle" style={buttonStyle} data-toggle="dropdown">
+        <button type="button" className="btn btn-xs btn-default dropdown-toggle" style={buttonStyle} data-toggle="dropdown">
           View
-          <span className="caret"></span>
+          <span className="caret" style={caretStyle}></span>
           <span className="sr-only">Toggle Dropdown</span>
         </button>
-        <ul className="dropdown-menu" role="menu">
+        <ul className="dropdown-menu" role="menu" style={dropdownStyle}>
         {
           this.props.links.map(function(linkData, i) {
             return (<li key={i}><a href={linkData[1]} target={linkData[2]} style={textStyle}>{linkData[0]}</a></li>)
@@ -34,15 +60,7 @@ var ActionButton = React.createClass({
 
 var InstanceRow = React.createClass({
   getInitialState: function () {
-    return { showLinks: false };
-  },
-  onMouseEnter: function() {
-    this.setState({ showLinks: true });
-    if (this.props.hoverOver) { this.props.hoverOver(); }
-  },
-  onMouseLeave: function() {
-    this.setState({ showLinks: false });
-    if (this.props.hoverOut) { this.props.hoverOut(); }
+    return { showLinks: true };
   },
   render: function() {
     var self = this;
@@ -57,7 +75,7 @@ var InstanceRow = React.createClass({
       'height': '35px',
     }
     return (
-      <tr onMouseLeave={this.onMouseLeave} onMouseEnter={this.onMouseEnter} className={className}>{
+      <tr className={className}>{
       row.map(
         function (value, i) {
           return <td key={i} style={rowStyle} className={headings[i]}>{value}</td>;

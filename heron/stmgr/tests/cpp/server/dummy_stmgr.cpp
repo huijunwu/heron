@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include <iostream>
@@ -90,9 +93,7 @@ DummyStMgr::DummyStMgr(EventLoopImpl* ss, const NetworkOptions& options, const s
 
   tmaster_client_ = new DummyTMasterClient(ss, tmaster_options, stmgr_id, stmgr_host, stmgr_port,
                                            shell_port, _instances);
-  tmaster_client_->Start();
   InstallRequestHandler(&DummyStMgr::HandleStMgrHelloRequest);
-  InstallMessageHandler(&DummyStMgr::HandleTupleStreamMessage);
   InstallMessageHandler(&DummyStMgr::HandleStartBackPressureMessage);
   InstallMessageHandler(&DummyStMgr::HandleStopBackPressureMessage);
 }
@@ -100,6 +101,16 @@ DummyStMgr::DummyStMgr(EventLoopImpl* ss, const NetworkOptions& options, const s
 DummyStMgr::~DummyStMgr() {
   tmaster_client_->Stop();
   delete tmaster_client_;
+}
+
+sp_int32 DummyStMgr::Start() {
+  if (SP_OK == Server::Start()) {
+    tmaster_client_->setStmgrPort(get_serveroptions().get_port());
+    tmaster_client_->Start();
+    return SP_OK;
+  } else {
+    return SP_NOTOK;
+  }
 }
 
 void DummyStMgr::HandleNewConnection(Connection* conn) {}
@@ -114,8 +125,6 @@ void DummyStMgr::HandleStMgrHelloRequest(REQID _id, Connection* _conn,
   SendResponse(_id, _conn, response);
   delete _request;
 }
-
-void DummyStMgr::HandleTupleStreamMessage(Connection*, heron::proto::stmgr::TupleStreamMessage*) {}
 
 void DummyStMgr::HandleStartBackPressureMessage(Connection*,
                                                 heron::proto::stmgr::StartBackPressureMessage*) {

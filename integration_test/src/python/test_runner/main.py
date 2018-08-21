@@ -1,3 +1,19 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 ''' main '''
 import argparse
 import json
@@ -293,11 +309,15 @@ def run_tests(conf, args):
 
   http_server_host_port = "%s:%d" % (args.http_server_hostname, args.http_server_port)
 
-  if args.tests_bin_path.endswith(".jar"):
+  if args.tests_bin_path.endswith("scala-integration-tests.jar"):
+    test_topologies = filter_test_topologies(conf["scalaTopologies"], args.test_topology_pattern)
+    topology_classpath_prefix = conf["topologyClasspathPrefix"]
+    extra_topology_args = "-s http://%s/state" % http_server_host_port
+  elif args.tests_bin_path.endswith("integration-tests.jar"):
     test_topologies = filter_test_topologies(conf["javaTopologies"], args.test_topology_pattern)
     topology_classpath_prefix = conf["topologyClasspathPrefix"]
     extra_topology_args = "-s http://%s/state" % http_server_host_port
-  elif args.tests_bin_path.endswith(".pex"):
+  elif args.tests_bin_path.endswith("heron_integ_topology.pex"):
     test_topologies = filter_test_topologies(conf["pythonTopologies"], args.test_topology_pattern)
     topology_classpath_prefix = ""
     extra_topology_args = ""

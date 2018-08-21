@@ -1,21 +1,28 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 '''integration test topology builder'''
 import copy
-from heron.api.src.python import api_constants
-from heron.api.src.python import Stream, Grouping
-from heron.api.src.python.topology import TopologyBuilder, Topology, TopologyType
+import heronpy.api.api_constants as api_constants
+from heronpy.api.stream import Stream, Grouping
+from heronpy.api.topology import TopologyBuilder, Topology, TopologyType
 from ..core import constants as integ_const
 from .aggregator_bolt import AggregatorBolt
 from .integration_test_spout import IntegrationTestSpout
@@ -30,7 +37,8 @@ class TestTopologyBuilder(TopologyBuilder):
   TERMINAL_BOLT_NAME = '__integration_test_aggregator_bolt'
   TERMINAL_BOLT_CLASS = AggregatorBolt
   DEFAULT_CONFIG = {api_constants.TOPOLOGY_DEBUG: True,
-                    api_constants.TOPOLOGY_ENABLE_ACKING: True,
+                    api_constants.TOPOLOGY_RELIABILITY_MODE:
+                    api_constants.TopologyReliabilityMode.ATLEAST_ONCE,
                     api_constants.TOPOLOGY_PROJECT_NAME: "heron-integration-test"}
   def __init__(self, name, http_server_url):
     super(TestTopologyBuilder, self).__init__(name)

@@ -1,7 +1,14 @@
 package(default_visibility = ["//visibility:public"])
 
-load("/tools/rules/jarjar_rules", "jarjar_binary")
-load("/tools/rules/heron_deps", "heron_java_proto_files")
+load("//tools/rules:build_defs.bzl", "DOCLINT_HTML_AND_SYNTAX")
+load("//tools/rules:javadoc.bzl", "java_doc")
+
+java_doc(
+    name = "heron-spi-javadoc",
+    libs = [":heron-spi"],
+    pkgs = ["org/apache/heron/spi"],
+    title = "Heron Spi Documentation",
+)
 
 java_library(
     name = 'heron-spi',
@@ -15,11 +22,13 @@ java_library(
         "**/spi/statemgr/**/*.java",
         "**/spi/metricsmgr/**/*.java",
     ]),
+    javacopts = DOCLINT_HTML_AND_SYNTAX,
     deps = [
-        "//heron/api/src/java:api-java",
+        "//heron/api/src/java:api-java-low-level",
         "//heron/api/src/java:classification",
         "//heron/common/src/java:basics-java",
         "//heron/common/src/java:config-java",
+        "//heron/common/src/java:utils-java",
         "//heron/proto:proto_common_java",
         "//heron/proto:proto_execution_state_java",
         "//heron/proto:proto_scheduler_java",
@@ -30,7 +39,7 @@ java_library(
         "//heron/proto:proto_ckptmgr_java",
         "@org_yaml_snakeyaml//jar",
         "@com_google_guava_guava//jar",
-        "@com_google_protobuf_protobuf_java//jar",
+        "@com_google_protobuf//:protobuf_java",
     ],
 )
 
@@ -44,7 +53,8 @@ utils_deps_files = \
         ":metricsmgr-spi-java",
         "//heron/common/src/java:basics-java",
         "//heron/common/src/java:config-java",
-        "//heron/api/src/java:api-java",
+        "//heron/common/src/java:utils-java",
+        "//heron/api/src/java:api-java-low-level",
         "@com_google_guava_guava//jar",
     ]
 
@@ -64,7 +74,7 @@ statefulstorage_deps_files = \
     ]
 
 packing_deps_files = [
-    "//heron/api/src/java:api-java",
+    "//heron/api/src/java:api-java-low-level",
     ":common-spi-java",
     "//heron/api/src/java:classification",
     "//heron/common/src/java:basics-java",

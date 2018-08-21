@@ -1,16 +1,23 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' heron.py '''
 
 import logging
@@ -376,7 +383,7 @@ def get_comp_instance_metrics(cluster, environ, topology, component,
   all_instances = instances if isinstance(instances, list) else [instances]
 
   # append each metric to the url
-  for _, metric_name in metrics.iteritems():
+  for _, metric_name in metrics.items():
     request_url = tornado.httputil.url_concat(request_url, dict(metricname=metric_name[0]))
 
   # append each instance to the url
@@ -790,6 +797,7 @@ class HeronQueryHandler(QueryHandler):
 
     raise tornado.gen.Return(result)
 
+  # pylint: disable=unused-argument
   @tornado.gen.coroutine
   def fetch_backpressure(self, cluster, metric, topology, component, instance, \
     timerange, is_max, environ=None):

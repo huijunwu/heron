@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #ifndef __TMASTER_H
@@ -21,6 +24,7 @@
 #include <set>
 #include <string>
 #include <vector>
+
 #include "statemgr/heron-statemgr.h"
 #include "metrics/metrics-mgr-st.h"
 #include "metrics/metrics.h"
@@ -36,16 +40,23 @@ class TController;
 class StatsInterface;
 class TMasterServer;
 class TMetricsCollector;
+class StatefulController;
+class CkptMgrClient;
 
 typedef std::map<std::string, StMgrState*> StMgrMap;
 typedef StMgrMap::iterator StMgrMapIter;
+
+typedef std::map<std::string, std::string> ConfigValueMap;
+// From component name to config/value pairs
+typedef std::map<std::string, std::map<std::string, std::string>> ComponentConfigMap;
 
 class TMaster {
  public:
   TMaster(const std::string& _zk_hostport, const std::string& _topology_name,
           const std::string& _topology_id, const std::string& _topdir,
-          sp_int32 _controller_port, sp_int32 _master_port,
-          sp_int32 _stats_port, sp_int32 metricsMgrPort, const std::string& metrics_sinks_yaml,
+          sp_int32 _tmaster_controller_port, sp_int32 _master_port,
+          sp_int32 _stats_port, sp_int32 metricsMgrPort, sp_int32 _ckptmgr_port,
+          const std::string& metrics_sinks_yaml,
           const std::string& _myhost_name, EventLoop* eventLoop);
 
   virtual ~TMaster();
@@ -53,8 +64,16 @@ class TMaster {
   const std::string& GetTopologyId() const { return current_pplan_->topology().id(); }
   const std::string& GetTopologyName() const { return current_pplan_->topology().name(); }
   proto::api::TopologyState GetTopologyState() const { return current_pplan_->topology().state(); }
+
   void ActivateTopology(VCallback<proto::system::StatusCode> cb);
   void DeActivateTopology(VCallback<proto::system::StatusCode> cb);
+  // Update runtime configs in a topology.
+  // Return true if successful; false otherwise and the callback function won't be invoked.
+  bool UpdateRuntimeConfig(const ComponentConfigMap& _config,
+                           VCallback<proto::system::StatusCode> cb);
+  // Validate runtime config. Return false if any issue is found.
+  bool ValidateRuntimeConfig(const ComponentConfigMap& _config) const;
+
   proto::system::Status* RegisterStMgr(const proto::system::StMgr& _stmgr,
                                        const std::vector<proto::system::Instance*>& _instances,
                                        Connection* _conn, proto::system::PhysicalPlan*& _pplan);
@@ -64,6 +83,11 @@ class TMaster {
 
   // When stmgr disconnects from us
   proto::system::StatusCode RemoveStMgrConnection(Connection* _conn);
+
+  // Called by http server upon receiving a user message to cleanup the state
+  void CleanAllStatefulCheckpoint();
+  // Called by ckptmgr client upon receiving CleanStatefulCheckpointResponse
+  void HandleCleanStatefulCheckpointResponse(proto::system::StatusCode);
 
   // Get stream managers registration summary
   proto::tmaster::StmgrsRegistrationSummaryResponse* GetStmgrsRegSummary();
@@ -76,9 +100,32 @@ class TMaster {
   // Now used in GetMetrics function in tmetrics-collector
   const proto::api::Topology* getInitialTopology() const { return topology_; }
 
+  // Timer function to start the stateful checkpoint process
+  void SendCheckpointMarker();
+
+  // Called by tmaster server when it gets InstanceStateStored message
+  void HandleInstanceStateStored(const std::string& _checkpoint_id,
+                                 const proto::system::Instance& _instance);
+
+  // Called by tmaster server when it gets RestoreTopologyStateResponse message
+  void HandleRestoreTopologyStateResponse(Connection* _conn,
+                                          const std::string& _checkpoint_id,
+                                          int64_t _restore_txid,
+                                          proto::system::StatusCode _status);
+
+  // Called by tmaster server when it gets ResetTopologyState message
+  void ResetTopologyState(Connection* _conn, const std::string& _dead_stmgr,
+                          int32_t _dead_instance, const std::string& _reason);
+
  private:
+  // Helper function to fetch physical plan
+  void FetchPhysicalPlan();
+
   // Function to be called that calls MakePhysicalPlan and sends it to all stmgrs
   void DoPhysicalPlan(EventLoop::Status _code);
+
+  // Log config object
+  void LogConfig(const ComponentConfigMap& _config);
 
   // Big brother function that does the assignment to the workers
   // If _new_stmgr is null, this means that there was a plan
@@ -87,15 +134,20 @@ class TMaster {
   proto::system::PhysicalPlan* MakePhysicalPlan();
 
   // Check to see if the topology is of correct format
-  bool ValidateTopology(proto::api::Topology _topology);
+  bool ValidateTopology(const proto::api::Topology& _topology);
 
   // Check to see if the topology and stmgrs match
   // in terms of workers
-  bool ValidateStMgrsWithTopology(proto::api::Topology _topology);
+  bool ValidateStMgrsWithPackingPlan();
 
   // Check to see if the stmgrs and pplan match
   // in terms of workers
-  bool ValidateStMgrsWithPhysicalPlan(proto::system::PhysicalPlan _pplan);
+  bool ValidateStMgrsWithPhysicalPlan(proto::system::PhysicalPlan* _pplan);
+
+  // Check if incoming runtime configs are valid or not.
+  // All incoming configurations must exist. If there is any non-existing
+  // configuration, or the data type is wrong, return false.
+  bool ValidateRuntimeConfigNames(const ComponentConfigMap& _config) const;
 
   // If the assignment is already done, then:
   // 1. Distribute physical plan to all active stmgrs
@@ -105,6 +157,15 @@ class TMaster {
   void SetTMasterLocationDone(proto::system::StatusCode _code);
   // Function called after we get the topology
   void GetTopologyDone(proto::system::StatusCode _code);
+
+  // Function called after we get StatefulConsistentCheckpoints
+  void GetStatefulCheckpointsDone(proto::ckptmgr::StatefulConsistentCheckpoints* _ckpt,
+                                  proto::system::StatusCode _code);
+  // Function called after we set an initial StatefulConsistentCheckpoints
+  void SetStatefulCheckpointsDone(proto::system::StatusCode _code,
+                            proto::ckptmgr::StatefulConsistentCheckpoints* _ckpt);
+  // Helper function to setup stateful coordinator
+  void SetupStatefulController(proto::ckptmgr::StatefulConsistentCheckpoints* _ckpt);
 
   // Function called after we try to get assignment
   void GetPhysicalPlanDone(proto::system::PhysicalPlan* _pplan, proto::system::StatusCode _code);
@@ -122,11 +183,23 @@ class TMaster {
 
   void UpdateProcessMetrics(EventLoop::Status);
 
+  // Update configurations in physical plan.
+  bool UpdateRuntimeConfigInTopology(proto::api::Topology* _topology,
+                                     const ComponentConfigMap& _config);
+
+  // Function called when a new stateful ckpt record is saved
+  void HandleStatefulCheckpointSave(const std::string& _oldest_ckpt);
+
+  // Function called to kill container
+  void KillContainer(const std::string& host_name,
+                     sp_int32 port,
+                     const std::string& stmgr_id);
+
   // map of active stmgr id to stmgr state
   StMgrMap stmgrs_;
 
   // map of connection to stmgr id
-  std::map<Connection*, sp_string> connection_to_stmgr_id_;
+  std::map<Connection*, std::string> connection_to_stmgr_id_;
 
   // set of nodemanagers that have not yet connected to us
   std::set<std::string> absent_stmgrs_;
@@ -157,8 +230,8 @@ class TMaster {
   std::string topdir_;
 
   // Servers that implement our services
-  TController* controller_;
-  sp_int32 controller_port_;
+  TController* tmaster_controller_;
+  sp_int32 tmaster_controller_port_;
   TMasterServer* master_;
   sp_int32 master_port_;
   StatsInterface* stats_;
@@ -176,11 +249,22 @@ class TMaster {
   // Metrics Manager
   heron::common::MetricsMgrSt* mMetricsMgrClient;
 
+  // Ckpt Manager
+  CkptMgrClient* ckptmgr_client_;
+  sp_int32 ckptmgr_port_;
+
   // Process related metrics
   heron::common::MultiAssignableMetric* tmasterProcessMetrics;
 
   // The time at which the stmgr was started up
   std::chrono::high_resolution_clock::time_point start_time_;
+
+  // Stateful Controller
+  StatefulController* stateful_controller_;
+
+  // HTTP client
+  AsyncDNS* dns_;
+  HTTPClient* http_client_;
 
   // Copy of the EventLoop
   EventLoop* eventLoop_;

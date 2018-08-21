@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 #include "manager/stmgr-client.h"
@@ -54,7 +57,8 @@ StMgrClient::StMgrClient(EventLoop* eventLoop, const NetworkOptions& _options,
                          const sp_string& _topology_name, const sp_string& _topology_id,
                          const sp_string& _our_id, const sp_string& _other_id,
                          StMgrClientMgr* _client_manager,
-                         heron::common::MetricsMgrSt* _metrics_manager_client)
+                         heron::common::MetricsMgrSt* _metrics_manager_client,
+                         bool _droptuples_upon_backpressure)
     : Client(eventLoop, _options),
       topology_name_(_topology_name),
       topology_id_(_topology_id),
@@ -64,7 +68,9 @@ StMgrClient::StMgrClient(EventLoop* eventLoop, const NetworkOptions& _options,
       client_manager_(_client_manager),
       metrics_manager_client_(_metrics_manager_client),
       ndropped_messages_(0),
-      is_registered_(false) {
+      reconnect_attempts_(0),
+      is_registered_(false),
+      droptuples_upon_backpressure_(_droptuples_upon_backpressure) {
   reconnect_other_streammgrs_interval_sec_ =
       config::HeronInternalsConfigReader::Instance()->GetHeronStreammgrClientReconnectIntervalSec();
 
@@ -91,6 +97,10 @@ void StMgrClient::HandleConnect(NetworkErrorCode _status) {
     LOG(INFO) << "Connected to stmgr " << other_stmgr_id_ << " running at "
               << get_clientoptions().get_host() << ":" << get_clientoptions().get_port()
               << std::endl;
+
+    // reset the reconnect attempt once connection established
+    reconnect_attempts_ = 0;
+
     if (quit_) {
       Stop();
     } else {
@@ -101,7 +111,7 @@ void StMgrClient::HandleConnect(NetworkErrorCode _status) {
                  << get_clientoptions().get_host() << ":" << get_clientoptions().get_port()
                  << " due to: " << _status << std::endl;
     if (quit_) {
-      LOG(ERROR) << "Quitting";
+      LOG(ERROR) << "Instructed to quit. Quitting...";
       delete this;
       return;
     } else {
@@ -160,7 +170,12 @@ void StMgrClient::HandleHelloResponse(void*, proto::stmgr::StrMgrHelloResponse* 
   client_manager_->HandleStMgrClientRegistered();
 }
 
-void StMgrClient::OnReConnectTimer() { Start(); }
+void StMgrClient::OnReConnectTimer() {
+  if (++reconnect_attempts_ % 100 == 0) {
+      LOG(INFO) << "Reconnect " << ndropped_messages_ << "th times to stmgr " << other_stmgr_id_;
+    }
+  Start();
+}
 
 void StMgrClient::SendHelloRequest() {
   auto request = new proto::stmgr::StrMgrHelloRequest();
@@ -172,20 +187,27 @@ void StMgrClient::SendHelloRequest() {
   return;
 }
 
-bool StMgrClient::SendTupleStreamMessage(proto::stmgr::TupleStreamMessage2& _msg) {
-  if (IsConnected()) {
-    SendMessage(_msg);
-    return true;
-  } else {
+bool StMgrClient::SendTupleStreamMessage(proto::stmgr::TupleStreamMessage& _msg) {
+  if (!IsConnected()) {
     if (++ndropped_messages_ % 100 == 0) {
       LOG(INFO) << "Dropping " << ndropped_messages_ << "th tuple message to stmgr "
                 << other_stmgr_id_ << " because it is not connected";
+      }
+    return false;
+  } else if (droptuples_upon_backpressure_ && HasCausedBackPressure()) {
+    if (++ndropped_messages_ % 100 == 0) {
+      LOG(INFO) << "Dropping " << ndropped_messages_ << "th tuple message to stmgr "
+                << other_stmgr_id_ << " because it is causing backpressure and "
+                << "droptuples_upon_backpressure is set";
     }
     return false;
+  } else {
+    SendMessage(_msg);
+    return true;
   }
 }
 
-void StMgrClient::HandleTupleStreamMessage(proto::stmgr::TupleStreamMessage2* _message) {
+void StMgrClient::HandleTupleStreamMessage(proto::stmgr::TupleStreamMessage* _message) {
   __global_protobuf_pool_release__(_message);
   LOG(FATAL) << "We should not receive tuple messages in the client" << std::endl;
 }
@@ -195,13 +217,20 @@ void StMgrClient::StartBackPressureConnectionCb(Connection* _connection) {
   // Ask the StMgrServer to stop consuming. The client does
   // not consume anything
 
-  client_manager_->StartBackPressureOnServer(other_stmgr_id_);
+  if (!droptuples_upon_backpressure_) {
+    client_manager_->StartBackPressureOnServer(other_stmgr_id_);
+  } else {
+    LOG(WARNING) << "Stmgr " << other_stmgr_id_ << " is not keeping up but backpressure "
+                 << "mechanism not initiated since droptuples_upon_backpressure is set true";
+  }
 }
 
 void StMgrClient::StopBackPressureConnectionCb(Connection* _connection) {
   _connection->unsetCausedBackPressure();
   // Call the StMgrServers removeBackPressure method
-  client_manager_->StopBackPressureOnServer(other_stmgr_id_);
+  if (!droptuples_upon_backpressure_) {
+    client_manager_->StopBackPressureOnServer(other_stmgr_id_);
+  }
 }
 
 void StMgrClient::SendStartBackPressureMessage() {

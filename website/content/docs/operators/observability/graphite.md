@@ -1,5 +1,5 @@
 ---
-title: Observability With Graphite
+title: Heron observability with Graphite
 ---
 
 To observe Heron's runtime metrics, you can integrate Heron and the Heron UI with
@@ -15,8 +15,7 @@ To accomplish this, you need to do the following:
 
 ### Exporting Topology Metrics From Heron
 
-Heron supports custom metric exporters from the Metrics Manager. You can build your own metrics sink
-or use the [provided Graphite sink](/docs/contributors/custom-metrics-sink/).
+Heron supports custom metric exporters from the Metrics Manager. You can either build your own Graphite metrics sink or use the [provided Graphite sink](/docs/contributors/custom-metrics-sink/).
 
 ### Gathering Metrics From Aurora
 
@@ -79,6 +78,6 @@ PS-*),5), 2,3,6)'
 
 Finally, you can configure the Heron UI to deep link to scripted dashboards by specifying an
 [observability URL format]
-(https://github.com/twitter/heron/blob/master/heron/config/src/yaml/tracker/heron_tracker.yaml)
+(https://github.com/apache/incubator-heron/blob/master/heron/config/src/yaml/tracker/heron_tracker.yaml)
 (`viz.url.format`) in the Heron Tracker's configuration. This will add topology-specific buttons to
 the Heron UI enabling you to drill-down into your Grafana dashboards.

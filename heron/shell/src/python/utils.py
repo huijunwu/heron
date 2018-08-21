@@ -1,17 +1,25 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' utils.py '''
+import functools
 import grp
 import os
 import pkgutil
@@ -30,9 +38,9 @@ def format_mode(sres):
   """
   mode = sres.st_mode
 
-  root = (mode & 0700) >> 6
-  group = (mode & 0070) >> 3
-  user = (mode & 07)
+  root = (mode & 0o700) >> 6
+  group = (mode & 0o070) >> 3
+  user = (mode & 0o7)
 
   def stat_type(md):
     ''' stat type'''
@@ -109,8 +117,8 @@ def read_chunk(filename, offset=-1, length=-1, escape_data=False):
   Read a chunk of a file from an offset upto the length.
   """
   try:
-    length = long(length)
-    offset = long(offset)
+    length = int(length)
+    offset = int(offset)
   except ValueError:
     return {}
 
@@ -175,7 +183,7 @@ def chain(cmd_list):
   Returns string output of chained application of commands.
   """
   command = ' | '.join(map(lambda x: ' '.join(x), cmd_list))
-  chained_proc = reduce(pipe, [None] + cmd_list)
+  chained_proc = functools.reduce(pipe, [None] + cmd_list)
   stdout_builder = proc.async_stdout_builder(chained_proc)
   chained_proc.wait()
   return {

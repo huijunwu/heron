@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 /////////////////////////////////////////////////////////////
@@ -25,7 +28,9 @@
 #ifndef SVCS_COMMON_CONFIG_PHYSICAL_PLAN_HELPER_H_
 #define SVCS_COMMON_CONFIG_PHYSICAL_PLAN_HELPER_H_
 
+#include <list>
 #include <map>
+#include <string>
 #include <unordered_set>
 #include "basics/basics.h"
 #include "proto/messages.h"
@@ -64,6 +69,19 @@ class PhysicalPlanHelper {
                           std::unordered_set<sp_int32>& _return);
 
   static void LogPhysicalPlan(const proto::system::PhysicalPlan& _pplan);
+
+  // Returns the component name for the specified _task_id
+  // If the _task_id is not part of the _pplan, return empty string
+  static const std::string& GetComponentName(const proto::system::PhysicalPlan& _pplan,
+                                             int _task_id);
+
+  // For a particular _component, returns all the task_ids
+  static void GetComponentTaskIds(const proto::system::PhysicalPlan& _pplan,
+                                  const std::string& _component, std::list<int>& _retval);
+
+  // Return a mapping from task id -> component name
+  static void GetTaskIdToComponentName(const proto::system::PhysicalPlan& _pplan,
+                                       std::map<int, std::string>& retval);
 };
 }  // namespace config
 }  // namespace heron

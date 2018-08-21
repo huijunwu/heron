@@ -1,7 +1,5 @@
 package(default_visibility = ["//visibility:public"])
 
-load("/tools/rules/genproto", "proto_library")
-
 cc_library(
     name = "network-cxx",
     srcs = [
@@ -19,6 +17,7 @@ cc_library(
         "networkoptions.cpp",
         "packet.cpp",
         "server.cpp",
+        "piper.cpp",
 
         "regevent.h",
         "asyncdns.h",
@@ -36,6 +35,7 @@ cc_library(
         "packet.h",
         "event_loop_impl.h",
         "server.h",
+        "piper.h",
     ],
     hdrs = [
         "network.h",
@@ -46,7 +46,7 @@ cc_library(
         "-I$(GENDIR)/heron/common/src/cpp",
     ],
     deps = [
-        "//third_party/libevent:libevent-cxx",
+        "@org_libevent_libevent//:libevent",
         "//heron/common/src/cpp/threads:threads-cxx",
         "//heron/common/src/cpp/errors:errors-cxx",
         "//heron/common/src/cpp/basics:basics-cxx",

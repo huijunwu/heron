@@ -1,17 +1,20 @@
-/*
- * Copyright 2015 Twitter, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
  *
  *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -43,6 +46,9 @@ class Message;
 }
 }
 
+struct evbuffer;
+struct bufferevent;
+
 /*
  * The PacketHeader class defines a bunch of methods for the manipulation
  * of the Packet Header. Users pass the start of the header to its
@@ -54,7 +60,7 @@ const sp_uint32 kSPPacketSize = sizeof(sp_uint32);
 
 class PacketHeader {
  public:
-  static void set_packet_size(char* header, sp_uint32 size);
+  static void set_packet_size(unsigned char* header, sp_uint32 size);
   static sp_uint32 get_packet_size(const char* header);
   static sp_uint32 header_size();
 };
@@ -78,7 +84,7 @@ class IncomingPacket {
   explicit IncomingPacket(sp_uint32 max_packet_size);
 
   // Form an incoming packet with raw data buffer - used for tests only
-  explicit IncomingPacket(char* _data);
+  explicit IncomingPacket(unsigned char* _data);
 
   //! Destructor
   ~IncomingPacket();
@@ -119,10 +125,10 @@ class IncomingPacket {
   // partially read and there was no more data. Further read
   // calls are necessary to completely read the packet.
   // A negative return value implies an irreovrable error
-  sp_int32 Read(sp_int32 fd);
+  sp_int32 Read(struct bufferevent* buf);
 
   // Helper method for Read to do the low level read calls.
-  sp_int32 InternalRead(sp_int32 fd, char* buffer, sp_uint32 size);
+  sp_int32 InternalRead(struct bufferevent* buf, char* buffer, sp_uint32 size);
 
   // The maximum packet length allowed. 0 means no limit
   sp_uint32 max_packet_size_;
@@ -178,7 +184,7 @@ class OutgoingPacket {
   sp_int32 PackREQID(const REQID& _rid);
 
   // gets the header
-  char* get_header() { return data_; }
+  unsigned char* get_header() { return underlying_data_; }
 
   // gets the packet as a string
   const sp_string toRawData();
@@ -196,22 +202,19 @@ class OutgoingPacket {
   // Only the Connection class can call the following functions
   friend class Connection;
 
-  // Once the data has been packed, the packet needs to be prepared before sending.
-  void PrepareForWriting();
+  // This call releases the underlying evbuffer.
+  // Only used by the connection class to send this packet
+  struct evbuffer* release_buffer();
 
-  // This call writes the packet into the file descriptor fd.
-  // A return value of zero implies that the packet has been
-  // completely sent out. A positive return value implies that
-  // the packet was sent out partially. Further calls of Send
-  // are required to send out the packet completely. A negative
-  // value implies an irrecoverable error.
-  sp_int32 Write(sp_int32 fd);
-
-  // The current position of packing/sending.
+  // The current position of packing.
   sp_uint32 position_;
 
-  // The header + data that makes the packet.
-  char* data_;
+  // The actual data is held in this buffer
+  struct evbuffer* buffer_;
+
+  // This is the actual pointer to the data
+  // that is inside the buffer_
+  unsigned char* underlying_data_;
 
   // The packet size as specified in the constructor.
   sp_uint32 total_packet_size_;

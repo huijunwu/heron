@@ -1,16 +1,23 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 ''' execute.py '''
 import contextlib
 import os
@@ -20,8 +27,11 @@ import tempfile
 import traceback
 
 from heron.common.src.python.utils.log import Log
+
 from heron.tools.cli.src.python.result import SimpleResult, ProcessResult, Status
+
 import heron.common.src.python.pex_loader as pex_loader
+
 import heron.tools.cli.src.python.opts as opts
 import heron.tools.cli.src.python.jars as jars
 import heron.tools.common.src.python.utils.config as config
@@ -95,7 +105,6 @@ def heron_tar(class_name, topology_tar, arguments, tmpdir_root, java_defines):
   topology_jar = os.path.basename(topology_tar).replace(".tar.gz", "").replace(".tar", "") + ".jar"
 
   extra_jars = [
-      os.path.join(tmpdir, "heron-instance.jar"),
       os.path.join(tmpdir, topology_jar),
       os.path.join(tmpdir, "*"),
       os.path.join(tmpdir, "libs/*")
@@ -140,3 +149,20 @@ def heron_pex(topology_pex, topology_class_name, args=None):
       err_context = "Topology %s failed to be loaded from the given pex: %s" %\
                 (topology_class_name, ex)
       return SimpleResult(Status.HeronError, err_context)
+
+# pylint: disable=superfluous-parens
+def heron_cpp(topology_binary, args=None):
+  Log.debug("Executing %s", topology_binary)
+  heron_env = os.environ.copy()
+  heron_env['HERON_OPTIONS'] = opts.get_heron_config()
+  cmd = [topology_binary]
+  if args is not None:
+    cmd.extend(args)
+  Log.debug("Invoking binary using command: ``%s''", ' '.join(cmd))
+  Log.debug('Heron options: {%s}', str(heron_env['HERON_OPTIONS']))
+  print("Invoking class using command: ``%s''" % ' '.join(cmd))
+  print('Heron options: {%s}' % str(heron_env['HERON_OPTIONS']))
+  # invoke the command with subprocess and print error message, if any
+  proc = subprocess.Popen(cmd, env=heron_env, stdout=subprocess.PIPE,
+                          stderr=subprocess.PIPE, bufsize=1)
+  return ProcessResult(proc)

@@ -1,16 +1,23 @@
-# Copyright 2016 Twitter. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
+#!/usr/bin/env python
+# -*- encoding: utf-8 -*-
+
+#  Licensed to the Apache Software Foundation (ASF) under one
+#  or more contributor license agreements.  See the NOTICE file
+#  distributed with this work for additional information
+#  regarding copyright ownership.  The ASF licenses this file
+#  to you under the Apache License, Version 2.0 (the
+#  "License"); you may not use this file except in compliance
+#  with the License.  You may obtain a copy of the License at
 #
 #    http://www.apache.org/licenses/LICENSE-2.0
 #
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#  Unless required by applicable law or agreed to in writing,
+#  software distributed under the License is distributed on an
+#  "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#  KIND, either express or implied.  See the License for the
+#  specific language governing permissions and limitations
+#  under the License.
+
 '''pex_loader.py: module for dynamically loading pex'''
 
 import os
@@ -109,8 +116,11 @@ def import_and_get_class(path_to_pex, python_class_name):
 
   # Resolve duplicate package suffix problem (heron.), if the top level package name is heron
   if python_class_name.startswith("heron."):
-    mod = resolve_heron_suffix_issue(abs_path_to_pex, python_class_name)
-    return getattr(mod, import_name)
+    try:
+      mod = resolve_heron_suffix_issue(abs_path_to_pex, python_class_name)
+      return getattr(mod, import_name)
+    except:
+      Log.error("Could not resolve class %s with special handling" % python_class_name)
 
   mod = __import__(from_path, fromlist=[import_name], level=-1)
   Log.debug("Imported module: %s" % str(mod))

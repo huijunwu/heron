@@ -12,12 +12,12 @@ cluster.
 # Develop a topology using simulator mode
 
 To run in simulator mode, use the ``SimulatorMode`` class, which is
-in ``storm-compatibility-unshaded_deploy.jar``  (under ``bazel-bin/heron/storm/src/java``).
+in ``storm-compatibility-unshaded_deploy.jar``  (under ``bazel-bin/storm-compatibility/src/java``).
 
 For example:
 
 ```java
-import com.twitter.heron.simulator.Simulator;
+import org.apache.heron.simulator.Simulator;
 Simulator simulator = new Simulator();
 ```
 

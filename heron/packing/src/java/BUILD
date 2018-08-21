@@ -1,10 +1,9 @@
 package(default_visibility = ["//visibility:public"])
 
-load("/tools/rules/heron_deps", "heron_java_proto_files")
-
 packing_deps_files = [
     "//heron/spi/src/java:common-spi-java",
     "//heron/common/src/java:basics-java",
+    "//heron/common/src/java:utils-java",
     "//heron/spi/src/java:packing-spi-java",
     "@com_google_guava_guava//jar",
     ":builder",
@@ -14,7 +13,7 @@ packing_deps_files = [
 roundrobin_deps_files = \
     heron_java_proto_files() + \
     packing_deps_files + [
-        "//heron/api/src/java:api-java",
+        "//heron/api/src/java:api-java-low-level",
         "//heron/spi/src/java:statemgr-spi-java",
         "//heron/spi/src/java:utils-spi-java",
     ]
@@ -22,7 +21,7 @@ roundrobin_deps_files = \
 binpacking_deps_files = \
     heron_java_proto_files() + \
     packing_deps_files + [
-        "//heron/api/src/java:api-java",
+        "//heron/api/src/java:api-java-low-level",
         "//heron/spi/src/java:statemgr-spi-java",
         "//heron/spi/src/java:utils-spi-java",
     ]
@@ -32,9 +31,11 @@ java_library(
     srcs = glob(["**/utils/*.java"]),
     deps = heron_java_proto_files() + [
         "//heron/common/src/java:basics-java",
+        "//heron/common/src/java:utils-java",
         "//heron/spi/src/java:common-spi-java",
         "//heron/spi/src/java:packing-spi-java",
         "//heron/spi/src/java:utils-spi-java",
+        "//heron/api/src/java:api-java-low-level"
     ],
 )
 
